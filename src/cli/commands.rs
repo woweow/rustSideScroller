@@ -67,6 +67,7 @@ impl CLI {
         println!("  get <key>");
         println!("  delete <key>");
         println!("  list");
+        println!("  set-hiscore-ttl <seconds>");
         println!("  exit");
     }
 
@@ -86,13 +87,24 @@ impl CLI {
             return true;
         }
 
-        let mut store = self.store.lock().unwrap();
-
         match parts[0].as_str() {
-            "set" => self.handle_set(&parts, &mut store),
-            "get" => self.handle_get(&parts, &mut store),
-            "delete" => self.handle_delete(&parts, &mut store),
-            "list" => self.handle_list(&store),
+            "set" => {
+                let mut store = self.store.lock().unwrap();
+                self.handle_set(&parts, &mut store)
+            },
+            "get" => {
+                let mut store = self.store.lock().unwrap();
+                self.handle_get(&parts, &mut store)
+            },
+            "delete" => {
+                let mut store = self.store.lock().unwrap();
+                self.handle_delete(&parts, &mut store)
+            },
+            "list" => {
+                let store = self.store.lock().unwrap();
+                self.handle_list(&store)
+            },
+            "set-hiscore-ttl" => self.handle_set_hiscore_ttl(&parts),
             "exit" => return false,
             _ => self.print_help(),
         }
@@ -153,9 +165,10 @@ impl CLI {
             println!("Usage: delete <key>");
             return;
         }
-        match store.delete(&parts[1]) {
-            Some(value) => println!("Deleted \"{}\" = \"{}\"", parts[1], value),
-            None => println!("Key \"{}\" not found", parts[1]),
+        let key = &parts[1];
+        match store.delete(key) {
+            Some(value) => println!("Deleted \"{}\" = \"{}\"", key, value),
+            None => println!("Key \"{}\" not found", key),
         }
     }
 
@@ -185,5 +198,27 @@ impl CLI {
             );
         }
         println!("Total items: {}", store.len());
+    }
+
+    fn handle_set_hiscore_ttl(&self, parts: &[String]) {
+        if parts.len() != 2 {
+            println!("Usage: set-hiscore-ttl <seconds>");
+            return;
+        }
+
+        if let Ok(ttl) = parts[1].parse::<u64>() {
+            // Drop the store lock before creating ScoreManager
+            {
+                let mut store = self.store.lock().unwrap();
+                store.set(
+                    "hiscore_ttl".to_string(),
+                    ttl.to_string(),
+                    None,
+                ).expect("Failed to save high score TTL");
+            }
+            println!("High score TTL set to {} seconds", ttl);
+        } else {
+            println!("Invalid TTL value. Please provide a positive number.");
+        }
     }
 } 
