@@ -3,10 +3,12 @@ use serde::{Serialize, Deserialize};
 use std::io::{self, Write};
 use std::time::SystemTime;
 use crate::store::kv_store::KvStore;
+use rand::{thread_rng, Rng};
 
 const HISCORE_PREFIX: &str = "hiscore:";
 const HISCORE_TTL_KEY: &str = "hiscore_ttl";
 const DEFAULT_TTL: u64 = 300; // 5 minutes in seconds
+const NANOID_LENGTH: usize = 8;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HiScore {
@@ -23,21 +25,50 @@ impl ScoreManager {
         Self { store }
     }
 
+    fn generate_nanoid() -> String {
+        const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let mut rng = thread_rng();
+        (0..NANOID_LENGTH)
+            .map(|_| {
+                let idx = rng.gen_range(0..CHARSET.len());
+                CHARSET[idx] as char
+            })
+            .collect()
+    }
+
+    fn sanitize_name(input: &str) -> String {
+        // Keep only a-z and A-Z characters
+        let sanitized: String = input
+            .chars()
+            .filter(|c| c.is_ascii_alphabetic())
+            .collect();
+
+        if sanitized.is_empty() {
+            // If no valid characters, generate a random ID
+            let nanoid = Self::generate_nanoid();
+            println!("No valid characters in name. Using generated ID: {}", nanoid);
+            nanoid
+        } else {
+            sanitized
+        }
+    }
+
     fn get_valid_name() -> String {
         loop {
-            print!("Enter your name: ");
+            print!("Enter your name (letters only): ");
             io::stdout().flush().unwrap();
 
             let mut name = String::new();
             io::stdin().read_line(&mut name).unwrap();
-            let name = name.trim().to_string();
+            let name = name.trim();
 
-            // Check if name contains at least one ASCII character
-            if name.chars().any(|c| c.is_ascii_alphanumeric()) {
-                return name;
+            let sanitized = Self::sanitize_name(name);
+            if !sanitized.is_empty() {
+                if sanitized != name {
+                    println!("Name sanitized to: {}", sanitized);
+                }
+                return sanitized;
             }
-            
-            println!("Name must contain at least one letter or number. Try again.");
         }
     }
 
@@ -94,7 +125,7 @@ impl ScoreManager {
             .expect("Failed to save high score");
     }
 
-    pub fn handle_new_score(&self, score: u32) {
+    pub fn handle_new_score(&self, score: u32) -> Vec<(String, u32, Option<u64>)> {
         let hiscores = self.get_hiscores();
         let is_high_score = hiscores.len() < 3 || 
                            hiscores.is_empty() || 
@@ -102,21 +133,17 @@ impl ScoreManager {
 
         if is_high_score {
             println!("\nCongratulations! You made the top 3!");
+            println!(); // Add a blank line before name prompt
             let name = Self::get_valid_name();
             self.save_hiscore(HiScore { name, score });
         }
 
-        println!("\nHigh Scores:");
-        let current_scores = self.get_hiscores();
-        if current_scores.is_empty() {
-            println!("No high scores yet!");
-        } else {
-            for (i, (score, ttl)) in current_scores.iter().take(3).enumerate() {
-                let ttl_info = ttl.map_or(String::new(), |t| format!(" (expires in {}s)", t));
-                println!("{}. {} - {}{}", i + 1, score.name, score.score, ttl_info);
-            }
-        }
-        println!();
+        // Return the high scores for the UI to display
+        self.get_hiscores()
+            .iter()
+            .take(3)
+            .map(|(score, ttl)| (score.name.clone(), score.score, *ttl))
+            .collect()
     }
 
     pub fn set_ttl(&self, ttl: u64) {

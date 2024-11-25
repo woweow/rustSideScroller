@@ -1,29 +1,33 @@
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use rand::Rng;
-use crossterm::{
-    event::{poll, read, Event, KeyCode},
-    terminal::{enable_raw_mode, disable_raw_mode},
-};
 use crate::store::kv_store::KvStore;
-use super::renderer::GameRenderer;
 use super::score::ScoreManager;
 use crate::{GAME_WIDTH, OBSTACLE_CHANCE, INITIAL_OBSTACLE_DENSITY};
 
+#[derive(Clone, Copy)]
+pub enum PlayerMove {
+    Up,
+    Down,
+    Quit,
+}
+
+#[derive(Clone)]
+pub struct GameState {
+    pub player_pos: (usize, usize),
+    pub top_row: Vec<bool>,
+    pub bottom_row: Vec<bool>,
+    pub score: u32,
+    pub is_game_over: bool,
+}
+
 pub struct Game {
-    player_pos: (usize, usize),
-    top_row: Vec<bool>,
-    bottom_row: Vec<bool>,
-    score: u32,
+    state: GameState,
     store: Arc<Mutex<KvStore>>,
-    renderer: GameRenderer,
     score_manager: ScoreManager,
 }
 
 impl Game {
     pub fn new(store: Arc<Mutex<KvStore>>) -> Self {
-        enable_raw_mode().unwrap();
-        
         let mut rng = rand::thread_rng();
         
         let top_row = (0..GAME_WIDTH)
@@ -41,71 +45,70 @@ impl Game {
             .collect();
 
         Game {
-            player_pos: (1, 1),
-            top_row,
-            bottom_row,
-            score: 0,
+            state: GameState {
+                player_pos: (1, 1),
+                top_row,
+                bottom_row,
+                score: 0,
+                is_game_over: false,
+            },
             store: store.clone(),
-            renderer: GameRenderer::new(),
             score_manager: ScoreManager::new(store),
         }
     }
 
+    pub fn get_state(&self) -> GameState {
+        self.state.clone()
+    }
+
     pub fn update(&mut self) {
-        self.score += 1;
-        self.top_row.rotate_left(1);
-        self.bottom_row.rotate_left(1);
+        if self.state.is_game_over {
+            return;
+        }
+
+        self.state.score += 1;
+        self.state.top_row.rotate_left(1);
+        self.state.bottom_row.rotate_left(1);
 
         let mut rng = rand::thread_rng();
-        self.top_row[GAME_WIDTH - 1] = rng.gen_bool(OBSTACLE_CHANCE);
-        self.bottom_row[GAME_WIDTH - 1] = rng.gen_bool(OBSTACLE_CHANCE);
+        self.state.top_row[GAME_WIDTH - 1] = rng.gen_bool(OBSTACLE_CHANCE);
+        self.state.bottom_row[GAME_WIDTH - 1] = rng.gen_bool(OBSTACLE_CHANCE);
 
-        if self.top_row[GAME_WIDTH - 1] && self.bottom_row[GAME_WIDTH - 1] {
+        if self.state.top_row[GAME_WIDTH - 1] && self.state.bottom_row[GAME_WIDTH - 1] {
             if rng.gen_bool(0.5) {
-                self.top_row[GAME_WIDTH - 1] = false;
+                self.state.top_row[GAME_WIDTH - 1] = false;
             } else {
-                self.bottom_row[GAME_WIDTH - 1] = false;
+                self.state.bottom_row[GAME_WIDTH - 1] = false;
             }
+        }
+
+        if self.is_collision() {
+            self.state.is_game_over = true;
         }
     }
 
-    pub fn handle_input(&mut self) {
-        if poll(Duration::from_millis(10)).unwrap() {
-            if let Ok(Event::Key(key_event)) = read() {
-                match key_event.code {
-                    KeyCode::Up => self.player_pos.1 = 0,
-                    KeyCode::Down => self.player_pos.1 = 1,
-                    KeyCode::Char('q') => std::process::exit(0),
-                    _ => {}
-                }
-            }
+    pub fn handle_input(&mut self, movement: PlayerMove) {
+        if self.state.is_game_over {
+            return;
+        }
+
+        match movement {
+            PlayerMove::Up => self.state.player_pos.1 = 0,
+            PlayerMove::Down => self.state.player_pos.1 = 1,
+            PlayerMove::Quit => self.state.is_game_over = true,
         }
     }
 
-    pub fn is_collision(&self) -> bool {
-        let (x, y) = self.player_pos;
-        (y == 0 && self.top_row[x]) || (y == 1 && self.bottom_row[x])
+    fn is_collision(&self) -> bool {
+        let (x, y) = self.state.player_pos;
+        (y == 0 && self.state.top_row[x]) || (y == 1 && self.state.bottom_row[x])
     }
 
-    pub fn render(&self) {
-        self.renderer.render(
-            self.score,
-            &self.top_row,
-            &self.bottom_row,
-            self.player_pos
-        );
-    }
-
-    pub fn handle_game_over(&self) {
-        disable_raw_mode().unwrap();
+    pub fn handle_game_over(&self) -> Vec<(String, u32, Option<u64>)> {
+        if !self.state.is_game_over {
+            return vec![];
+        }
         
-        self.renderer.show_game_over(self.score);
-        self.score_manager.handle_new_score(self.score);
-    }
-}
-
-impl Drop for Game {
-    fn drop(&mut self) {
-        let _ = disable_raw_mode();
+        self.score_manager.handle_new_score(self.state.score)
     }
 } 
