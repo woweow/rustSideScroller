@@ -1,8 +1,14 @@
 use std::collections::HashMap;
 use std::fs;
-use crate::store::types::Value;
+use serde::{Serialize, Deserialize};
 
 const STORAGE_PATH: &str = "kv_store.json";
+
+#[derive(Serialize, Deserialize)]
+pub struct Value {
+    pub data: String,
+    pub expires_at: Option<u64>,
+}
 
 pub struct FileStorage;
 

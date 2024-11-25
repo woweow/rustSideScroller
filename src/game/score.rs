@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use serde::{Serialize, Deserialize};
 use std::io::{self, Write};
 use std::time::SystemTime;
-use crate::store::kv_store::KvStore;
+use simple_kv_store::KvStore;
 use rand::{thread_rng, Rng};
 
 const HISCORE_PREFIX: &str = "hiscore:";
@@ -121,7 +121,7 @@ impl ScoreManager {
         let key = format!("{}{}-{}-{}", HISCORE_PREFIX, score.name, score.score, timestamp);
         let json = serde_json::to_string(&score).unwrap();
         
-        store.set(key, json, Some(ttl))
+        store.set_with_ttl(key, json, Some(ttl))
             .expect("Failed to save high score");
     }
 
@@ -148,7 +148,7 @@ impl ScoreManager {
 
     pub fn set_ttl(&self, ttl: u64) {
         let mut store = self.store.lock().unwrap();
-        store.set(
+        store.set_with_ttl(
             HISCORE_TTL_KEY.to_string(),
             ttl.to_string(),
             None,

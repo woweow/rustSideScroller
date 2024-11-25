@@ -1,5 +1,4 @@
 mod cli;
-mod store;
 mod persistence;
 mod game;
 
@@ -11,7 +10,7 @@ use crossterm::{
     event::{poll, read, Event, KeyCode},
 };
 use std::sync::{Arc, Mutex};
-use crate::store::kv_store::KvStore;
+use simple_kv_store::KvStore;
 use std::env;
 use crate::cli::commands::CLI;
 use crate::game::{Game, GameState, PlayerMove};
@@ -76,16 +75,17 @@ fn render_game(state: &GameState) {
     io::stdout().flush().unwrap();
 }
 
-fn main() {
-    let store = Arc::new(Mutex::new(KvStore::new()));
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let store = Arc::new(Mutex::new(KvStore::new()?));
     
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "--cli" {
         let cli = CLI::new(store);
         cli.run();
+        Ok(())
     } else {
-        enable_raw_mode().unwrap();
-        execute!(io::stdout(), Hide).unwrap();
+        enable_raw_mode()?;
+        execute!(io::stdout(), Hide)?;
         
         loop {
             let mut game = Game::new(store.clone());
@@ -100,7 +100,7 @@ fn main() {
                 thread::sleep(FRAME_DURATION);
             }
             
-            disable_raw_mode().unwrap();
+            disable_raw_mode()?;
             
             let high_scores = game.handle_game_over();
             println!("\nGame Over! Final score: {}", game.get_state().score);
@@ -119,8 +119,10 @@ fn main() {
                 break;
             }
             
-            enable_raw_mode().unwrap();
-            execute!(io::stdout(), Clear(ClearType::All)).unwrap();
+            enable_raw_mode()?;
+            execute!(io::stdout(), Clear(ClearType::All))?;
         }
+        
+        Ok(())
     }
 } 

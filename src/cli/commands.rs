@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
-use crate::store::kv_store::KvStore;
+use simple_kv_store::KvStore;
 
 #[allow(dead_code)]
 pub struct CLI {
@@ -139,7 +139,7 @@ impl CLI {
             (value.to_string(), None)
         };
         
-        match store.set(key.clone(), value.clone(), ttl) {
+        match store.set_with_ttl(key.clone(), value.clone(), ttl) {
             Ok(_) => println!("Set \"{}\" = {}{}", 
                 key, 
                 value,
@@ -167,8 +167,9 @@ impl CLI {
         }
         let key = &parts[1];
         match store.delete(key) {
-            Some(value) => println!("Deleted \"{}\" = \"{}\"", key, value),
-            None => println!("Key \"{}\" not found", key),
+            Ok(Some(value)) => println!("Deleted \"{}\" = \"{}\"", key, value),
+            Ok(None) => println!("Key \"{}\" not found", key),
+            Err(e) => println!("Error deleting key: {}", e),
         }
     }
 
@@ -210,7 +211,7 @@ impl CLI {
             // Drop the store lock before creating ScoreManager
             {
                 let mut store = self.store.lock().unwrap();
-                store.set(
+                store.set_with_ttl(
                     "hiscore_ttl".to_string(),
                     ttl.to_string(),
                     None,

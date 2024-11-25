@@ -1,10 +1,10 @@
 [package]
-name = "simple_kv_store"
+name = "side_scroller"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-simple_kv_store = { path = "./datastore" }
+simple_kv_store = { git = "https://github.com/woweow/kvstore.git", branch = "mainline" }
 crossterm = "0.26"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
