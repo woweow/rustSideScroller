@@ -1,5 +1,6 @@
 /target
-/storage
-*.json
-Cargo.lock
+**/*.rs.bk
+*.pdb
 .DS_Store
+Cargo.lock
+kv_store.json
