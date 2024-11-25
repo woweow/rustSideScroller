@@ -22,7 +22,6 @@ pub struct GameState {
 
 pub struct Game {
     state: GameState,
-    store: Arc<Mutex<KvStore>>,
     score_manager: ScoreManager,
 }
 
@@ -52,7 +51,6 @@ impl Game {
                 score: 0,
                 is_game_over: false,
             },
-            store: store.clone(),
             score_manager: ScoreManager::new(store),
         }
     }

@@ -73,7 +73,7 @@ impl ScoreManager {
     }
 
     fn get_ttl(&self) -> u64 {
-        let mut store = self.store.lock().unwrap();
+        let store = self.store.lock().unwrap();
         store.get(HISCORE_TTL_KEY)
             .and_then(|ttl_str| ttl_str.parse().ok())
             .unwrap_or(DEFAULT_TTL)
@@ -144,14 +144,5 @@ impl ScoreManager {
             .take(3)
             .map(|(score, ttl)| (score.name.clone(), score.score, *ttl))
             .collect()
-    }
-
-    pub fn set_ttl(&self, ttl: u64) {
-        let mut store = self.store.lock().unwrap();
-        store.set_with_ttl(
-            HISCORE_TTL_KEY.to_string(),
-            ttl.to_string(),
-            None,
-        ).expect("Failed to save high score TTL");
     }
 } 

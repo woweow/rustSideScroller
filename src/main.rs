@@ -1,12 +1,11 @@
 mod cli;
-mod persistence;
 mod game;
 
 use std::{io::{self, Write}, thread, time::Duration};
 use crossterm::{
     execute,
     terminal::{Clear, ClearType, enable_raw_mode, disable_raw_mode},
-    cursor::{Hide, Show, MoveTo},
+    cursor::{Hide, MoveTo},
     event::{poll, read, Event, KeyCode},
 };
 use std::sync::{Arc, Mutex};
