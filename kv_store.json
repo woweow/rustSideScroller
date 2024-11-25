@@ -1,1 +1,1 @@
-{"person":{"data":{"age":30,"name":"John"},"expires_at":null}}
+{"person":{"data":{"age":30,"name":"John"},"expires_at":null},"hiscores":{"data":[{"name":"Brian","score":41},{"name":"brian again","score":28},{"name":"new brian","score":17}],"expires_at":null}}
