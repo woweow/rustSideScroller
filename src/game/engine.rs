@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 use rand::Rng;
-use crate::store::kv_store::KvStore;
+use simple_kv_store::KvStore;
 use super::score::ScoreManager;
 use crate::{GAME_WIDTH, OBSTACLE_CHANCE, INITIAL_OBSTACLE_DENSITY};
 
