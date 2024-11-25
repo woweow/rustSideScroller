@@ -1,1 +1,0 @@
-/Users/b/coding/rust/target/debug/simple_kv_store: /Users/b/coding/rust/src/cli/commands.rs /Users/b/coding/rust/src/cli/mod.rs /Users/b/coding/rust/src/main.rs /Users/b/coding/rust/src/persistence/file.rs /Users/b/coding/rust/src/persistence/mod.rs /Users/b/coding/rust/src/store/kv_store.rs /Users/b/coding/rust/src/store/mod.rs /Users/b/coding/rust/src/store/types.rs
