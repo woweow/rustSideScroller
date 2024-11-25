@@ -3,11 +3,12 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use crate::store::kv_store::KvStore;
 
+#[allow(dead_code)]
 pub struct CLI {
     store: Arc<Mutex<KvStore>>,
 }
 
-fn split_command(input: &str) -> Vec<String> {
+pub fn split_command(input: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let mut current = String::new();
     let mut in_quotes = false;
@@ -43,6 +44,7 @@ fn split_command(input: &str) -> Vec<String> {
     parts
 }
 
+#[allow(dead_code)]
 impl CLI {
     pub fn new(store: Arc<Mutex<KvStore>>) -> Self {
         CLI { store }

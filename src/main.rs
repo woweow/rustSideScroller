@@ -14,9 +14,10 @@ use serde::{Serialize, Deserialize};
 use std::sync::{Arc, Mutex};
 use crate::store::kv_store::KvStore;
 use std::env;
+use crate::cli::commands::CLI;
 
 const GAME_WIDTH: usize = 40;
-const GAME_HEIGHT: usize = 2;
+// const GAME_HEIGHT: usize = 2;
 const FRAME_DURATION: Duration = Duration::from_millis(200);
 const OBSTACLE_CHANCE: f64 = 0.3;
 const INITIAL_OBSTACLE_DENSITY: f64 = 0.2;
@@ -186,6 +187,7 @@ impl Game {
         for (i, score) in hiscores.iter().enumerate() {
             println!("{}. {} - {}", i + 1, score.name, score.score);
         }
+        println!();
     }
 }
 
@@ -204,45 +206,34 @@ fn ask_play_again() -> bool {
     input.trim().to_lowercase().starts_with('y')
 }
 
-fn main() -> io::Result<()> {
-    let args: Vec<String> = env::args().collect();
+fn main() {
     let store = Arc::new(Mutex::new(KvStore::new()));
-
-    if args.len() > 1 && args[1] == "--clear-hiscores" {
-        clear_hiscores(&store);
-        return Ok(());
-    }
-
-    loop {  // Main game loop
-        execute!(io::stdout(), Hide)?;
-
-        let mut game = Game::new(store.clone());
-        let mut last_update = std::time::Instant::now();
-
-        loop {  // Single game loop
-            game.handle_input();
-
-            if last_update.elapsed() >= FRAME_DURATION {
-                game.update();
-                last_update = std::time::Instant::now();
-
-                if game.is_collision() {
-                    game.handle_game_over();
-                    break;
-                }
-            }
-
-            game.render();
-            thread::sleep(Duration::from_millis(16));
-        }
-
-        if !ask_play_again() {
-            break;
-        }
+    
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 && args[1] == "--cli" {
+        let cli = CLI::new(store);
+        cli.run();
+    } else {
+        execute!(io::stdout(), Hide).unwrap();
         
-        // Clear the screen before starting new game
-        execute!(io::stdout(), Clear(ClearType::All))?;
+        loop {
+            let mut game = Game::new(store.clone());
+            
+            while !game.is_collision() {
+                game.handle_input();
+                game.render();
+                game.update();
+                thread::sleep(FRAME_DURATION);
+            }
+            
+            game.handle_game_over();
+            println!();
+            
+            if !ask_play_again() {
+                break;
+            }
+            
+            execute!(io::stdout(), Clear(ClearType::All)).unwrap();
+        }
     }
-
-    Ok(())
 } 
