@@ -4,3 +4,4 @@
 .DS_Store
 Cargo.lock
 kv_store.json
+/storage
