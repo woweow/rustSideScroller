@@ -1,7 +1,10 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use rand::Rng;
-use crossterm::event::{poll, read, Event, KeyCode};
+use crossterm::{
+    event::{poll, read, Event, KeyCode},
+    terminal::{enable_raw_mode, disable_raw_mode},
+};
 use crate::store::kv_store::KvStore;
 use super::renderer::GameRenderer;
 use super::score::ScoreManager;
@@ -19,6 +22,8 @@ pub struct Game {
 
 impl Game {
     pub fn new(store: Arc<Mutex<KvStore>>) -> Self {
+        enable_raw_mode().unwrap();
+        
         let mut rng = rand::thread_rng();
         
         let top_row = (0..GAME_WIDTH)
@@ -70,6 +75,7 @@ impl Game {
                 match key_event.code {
                     KeyCode::Up => self.player_pos.1 = 0,
                     KeyCode::Down => self.player_pos.1 = 1,
+                    KeyCode::Char('q') => std::process::exit(0),
                     _ => {}
                 }
             }
@@ -91,7 +97,15 @@ impl Game {
     }
 
     pub fn handle_game_over(&self) {
+        disable_raw_mode().unwrap();
+        
         self.renderer.show_game_over(self.score);
         self.score_manager.handle_new_score(self.score);
+    }
+}
+
+impl Drop for Game {
+    fn drop(&mut self) {
+        let _ = disable_raw_mode();
     }
 } 

@@ -2,7 +2,7 @@ use std::io::{self, Write};
 use crossterm::{
     execute,
     terminal::{Clear, ClearType},
-    cursor::{Hide, Show, MoveTo},
+    cursor::{MoveTo},
 };
 
 pub struct GameRenderer;
@@ -17,6 +17,8 @@ impl GameRenderer {
         
         println!("Score: {}", score);
         
+        execute!(io::stdout(), MoveTo(0, 1)).unwrap();
+        
         for (i, &has_obstacle) in top_row.iter().enumerate() {
             if player_pos == (i, 0) {
                 print!("x");
@@ -26,8 +28,9 @@ impl GameRenderer {
                 print!(" ");
             }
         }
-        println!();
-
+        
+        execute!(io::stdout(), MoveTo(0, 2)).unwrap();
+        
         for (i, &has_obstacle) in bottom_row.iter().enumerate() {
             if player_pos == (i, 1) {
                 print!("x");
@@ -37,13 +40,11 @@ impl GameRenderer {
                 print!(" ");
             }
         }
-        println!();
         
         io::stdout().flush().unwrap();
     }
 
     pub fn show_game_over(&self, score: u32) {
-        execute!(io::stdout(), Show).unwrap();
         println!("\nGame Over! Final score: {}", score);
     }
 } 
